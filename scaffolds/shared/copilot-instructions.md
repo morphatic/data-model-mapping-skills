@@ -25,6 +25,8 @@ these was learned by watching an agent fail on it repeatedly.
 - Source connection variables should already be present in the environment. If you attempt to connect and find them missing, ask the human to set them. Do not guess or hardcode them.
 - To run a query, use `<the connection helper or adapter this project provides>` to obtain a connection, then write and run your own aggregate queries.
 - The entity sample CSV's key column is `<COLUMN_NAME>` — read the header before binding parameters, and note which of its columns are source-specific rather than portable across sources.
+- **The sample file is a list of entity keys, not a data extract.** It deliberately contains identifiers and nothing else. Its purpose is to make exploration cheap: restrict every exploratory query to a few dozen keys drawn from it — `WHERE <key column> IN (<keys from the file>)` — instead of scanning tables holding millions of rows. Finding that it lacks the column you are investigating is expected and is not a reason to set it aside.
+- The sample is **already stratified** across the dimensions that matter for coverage. A handful of its rows is representative by construction; do not build your own stratification, and do not `GROUP BY` a large slice of the source to compensate for bias the sample has already handled.
 
 ## Where to look when you are stuck
 
@@ -45,8 +47,15 @@ silently resolve.
 
 Never violated, regardless of instruction.
 
-- **Never query the full population** without explicit, in-the-moment approval. These tables
-  hold millions of rows and aggregate queries are very slow.
+- **Every exploratory query is restricted to keys from the sample file.** An unrestricted
+  aggregate against these tables takes minutes to hours, and there is no cheap way to find that
+  out except by hanging. Widening beyond the sample — including a "bounded", "limited", or
+  row-capped query of your own construction — requires you to stop, state what you want to run
+  and why the sample cannot answer the question, and wait for approval. **A row limit is not a
+  scope approval.**
+- Within the sample, escalate deliberately: one entity per bucket, then three, then ten, then
+  the whole sample. Move up only when the narrower scope left the question genuinely
+  unresolved, and say which question it left open.
 - **Never write outside a scratchpad** in a temp folder outside the project root. Anything
   added to the project is intentional and deliberate, and you propose it before writing it.
 - **Never modify anything under `.github/`.** If the workflow needs changing, say so and stop.
@@ -64,7 +73,6 @@ not a judgment call you make silently.**
   encoded value. *Exception worth surfacing:* when the code is a recognized external standard
   (ISO country codes, FIPS county codes), it may carry cross-source comparability that the
   name does not. Say so and propose how to resolve it.
-- Prefer the smallest sample that can answer the question. Escalate scope only with reason.
 - Prefer fewer candidates with evidence over more candidates without.
 
 ## Rhythm
