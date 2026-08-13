@@ -8,6 +8,26 @@ with everything else in context.
 - **attribute** — an element of an abstract domain model in `configs/domains/`
 - **field** — a physical column in a source system that may instantiate an attribute
 
+## What this work is
+
+For each attribute, the deliverable is a decision about **which physical field to map**, with
+just enough evidence to justify it and to document the alternatives:
+
+- find every plausible candidate field
+- gather the minimum evidence that separates them
+- name a primary, and record the others with the reason each one lost
+- record what remains uncertain
+
+**Profiling is a separate, later phase.** Value distributions, data quality, outlier analysis,
+population characteristics, and completeness reporting are not part of this work. Do not pursue
+them, do not propose them as a next action, and do not use them to justify a wider query. When
+you notice something a future profiler will want to know, write it down in one line as a note
+and move on — that is the correct handling, and it is all of it.
+
+The bar for evidence is *enough to make a well-reasoned choice and show your reasoning*, not
+*enough to be certain*. Attributes frequently converge after one or two probes. That is the
+expected outcome, not a sign you stopped too early.
+
 ## Environment facts
 
 Replace this list with facts true of your own environment. The examples below are
