@@ -1,0 +1,315 @@
+# ============================================================
+# Logical-to-Physical Data Mapping — GENERIC EXAMPLE
+#
+# For one domain and one source system: where does each
+# canonical attribute physically live, what evidence supports
+# that choice, and what remains undecided?
+#
+# This file demonstrates all four decision states:
+#   mapped       — region_code, region_name, names, birth_date
+#   unresolved   — external_id (provisional, evidence thin)
+#   withheld     — geo_latitude / geo_longitude
+#   missing      — loyalty_tier
+#
+# Section order follows configs/mappings/README.md.
+# ============================================================
+
+system = "warehouse"
+
+[defaults]
+catalog = "EXAMPLE_CATALOG"
+schema = "EXAMPLE_SCHEMA"
+
+# ============================================================
+# Sources
+#
+# A source is (table + optional filter) bound to an alias, so
+# one physical table may appear several times under different
+# aliases when it stores different things per row type.
+#
+# Aliases are query-style: 1-3 characters, semantic, stable
+# once referenced by a field expression.
+# ============================================================
+
+[[sources]]
+alias = "c"
+table = "CUSTOMER_VERSION_HIST_FACT"
+role = "base"
+filter = "CURRENT_VERSION_FLAG = 'Y'"
+
+[[sources]]
+alias = "tax"
+table = "CUSTOMER_OTHER_ID"
+role = "tax_id"
+filter = "ID_TYPE_KEY = 100"
+
+[[sources]]
+alias = "alt"
+table = "CUSTOMER_ALT_ID_FACT"
+role = "tax_id_alternate"
+
+[[sources]]
+alias = "ext"
+table = "CUSTOMER_OTHER_ID"
+role = "external_id"
+filter = "ID_TYPE_KEY = 200"
+
+[[sources]]
+alias = "bdt"
+table = "DATE_DIMENSION"
+role = "customer_birth_date"
+
+[[sources]]
+alias = "lb1"
+table = "CUSTOMER_TO_LANGUAGE"
+role = "primary_language_bridge"
+filter = "SORT_ORDER = 1"
+
+[[sources]]
+alias = "lgl"
+table = "LANGUAGE_CODE"
+role = "language_lookup"
+
+[[sources]]
+alias = "ap"
+table = "POSTAL_ADDRESS"
+role = "primary_address"
+
+[[sources]]
+alias = "cap"
+table = "CONTACT_POSTAL_ADDRESS"
+role = "contact_address"
+
+[[sources]]
+alias = "rgn"
+table = "REGION_CODE"
+role = "region_lookup"
+
+# ============================================================
+# Joins
+#
+# Every non-base alias reaches the base alias by exactly one
+# path. Keeping that invariant means the join subset needed for
+# any expression can be derived by walking to the root.
+#
+# LEFT joins are intentional: optional attributes must stay
+# visible as nulls so coverage metrics remain meaningful.
+# ============================================================
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "tax.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "c.CUSTOMER_KEY"
+right = "alt.CUSTOMER_KEY"
+type = "left"
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "ext.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "c.BIRTH_DATE_KEY"
+right = "bdt.DATE_KEY"
+type = "left"
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "lb1.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "lb1.LANGUAGE_DOMAIN_KEY"
+right = "lgl.LANGUAGE_DOMAIN_KEY"
+type = "left"
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "ap.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "cap.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "ap.REGION_CODE"
+right = "rgn.REGION_CODE"
+type = "left"
+
+# ============================================================
+# Identity
+#
+# The business identifier, which is usually NOT the join key.
+# Here the business identifier is c.CUSTOMER_PUBLIC_ID while
+# joins run on c.CUSTOMER_HISTORY_FACT_KEY.
+# ============================================================
+
+[identity]
+business_key = ["customer_id"]
+
+# ============================================================
+# Attribute candidates
+#
+# Only for attributes with a genuine source-of-truth decision.
+# A single plausible path needs no candidate block — map it
+# directly in [fields].
+# ============================================================
+
+# --- mapped, decided on evidence -----------------------------
+
+[attribute_candidates.tax_id]
+attribute = "tax_id"
+candidate_resolution_mode = "multi_candidate"
+selection_status = "recommended"
+selected_expression = "tax.IDENTIFICATION_NUMBER"
+selection_strategy = "prefer the typed identifier slice; retain the alternate fact table for drift checks"
+
+[[attribute_candidates.tax_id.candidates]]
+candidate_id = "other_id_typed"
+expression = "tax.IDENTIFICATION_NUMBER"
+source_alias = "tax"
+status = "primary_recommended"
+rationale = "Highest coverage in sampled probe and one value per customer throughout"
+
+[[attribute_candidates.tax_id.candidates]]
+candidate_id = "alt_id_fact"
+expression = "alt.TAX_IDENTIFIER"
+source_alias = "alt"
+status = "strong_secondary"
+rationale = "Agrees wherever both are populated but has lower coverage; useful as a drift check"
+
+[attribute_candidates.tax_id.latest_probe]
+run_date = "2026-01-15"
+sample_scope = "small"
+sample_definition = "first 3 customers per (segment, status) from the prepared sample"
+sample_customer_count = 90
+sample_bucket_count = 30
+pop_other_id_typed = 88
+pop_alt_id_fact = 61
+both_populated = 61
+agree_typed_vs_alt = 61
+multi_value_customers_typed = 0
+inference = "Typed identifier slice remains the recommended primary; alternate agrees exactly where present."
+
+# --- unresolved, evidence insufficient to commit --------------
+
+[attribute_candidates.external_id]
+attribute = "external_id"
+candidate_resolution_mode = "multi_candidate"
+selection_status = "provisional"
+selected_expression = "ext.IDENTIFICATION_NUMBER"
+selection_strategy = "generic source label; hold as provisional until the business meaning of the ID type is confirmed"
+
+[[attribute_candidates.external_id.candidates]]
+candidate_id = "other_id_generic"
+expression = "ext.IDENTIFICATION_NUMBER"
+source_alias = "ext"
+status = "primary_recommended"
+rationale = "Best coverage and consistent format, but the ID type's label is generic and its business meaning is unconfirmed"
+
+[attribute_candidates.external_id.latest_probe]
+run_date = "2026-01-15"
+sample_scope = "medium"
+sample_definition = "first 10 customers per (segment, status) from the prepared sample"
+sample_customer_count = 240
+pop_other_id_generic = 151
+format_consistent = 151
+inference = "Format is uniform, but a uniform format does not establish semantics. Confirm with a data owner before promoting."
+
+# --- withheld, correlated-field coherence risk ----------------
+
+[attribute_candidates.geo_latitude]
+attribute = "geo_latitude"
+candidate_resolution_mode = "multi_candidate"
+selection_status = "withheld_pending_coherence_validation"
+selected_expression = ""
+selection_strategy = "Geospatial values exist only on the contact address table while the address backbone is the primary address table. Mapping across the two risks coordinates that do not correspond to the mapped address."
+
+[[attribute_candidates.geo_latitude.candidates]]
+candidate_id = "contact_address_latitude"
+expression = "cap.LATITUDE"
+source_alias = "cap"
+status = "validation_only"
+rationale = "Populated and plausible, but sourced from a different address record than the mapped address fields. Coherence with the primary address is unverified."
+
+[attribute_candidates.geo_latitude.latest_probe]
+run_date = "2026-01-15"
+sample_scope = "small"
+sample_definition = "first 3 customers per (segment, status) from the prepared sample"
+sample_customer_count = 90
+pop_contact_latitude = 74
+customers_with_differing_address_rows = 39
+inference = "Coordinates exist, but a large share of customers carry differing primary and contact address rows. Withhold until a data owner confirms which address is authoritative."
+
+# geo_longitude is withheld on the same grounds; see [notes].
+
+# --- missing in source ----------------------------------------
+
+[attribute_candidates.loyalty_tier]
+attribute = "loyalty_tier"
+candidate_resolution_mode = "not_mappable_yet"
+selection_status = "unassessed"
+selected_expression = ""
+selection_strategy = "No candidate field was identified in this source."
+
+[attribute_candidates.loyalty_tier.missing]
+availability_status = "missing_in_source"
+run_date = "2026-01-15"
+evidence_summary = "Searched object and column names, walked the join neighborhood from the base fact, and read the contents of small reference tables. No tier-like attribute found."
+next_action = "Confirm with the data owner whether tier is held outside this warehouse or is not captured at all."
+
+# ============================================================
+# Attribute context
+#
+# Supporting or provenance fields that inform interpretation
+# but do not replace the runtime mapping.
+# ============================================================
+
+[attribute_context.region_code]
+related_fields = ["cap.REGION_CODE", "rgn.REGION_DESC"]
+related_field_purpose = "Alternate address path and long-form description, retained for reconciliation and display."
+usage = "context_only"
+
+[attribute_context.primary_language]
+related_fields = ["lb1.SORT_ORDER", "lb1.LANGUAGE_DOMAIN_KEY"]
+related_field_purpose = "Bridge ordering that designates which of several languages is primary."
+usage = "context_only"
+
+# ============================================================
+# Notes
+#
+# Human-targeted guidance that prevents analytical mistakes.
+# Not a substitute for per-attribute decision state.
+# ============================================================
+
+[notes]
+join_rationale = "LEFT joins throughout so that null coverage stays visible in profiling."
+grain_warning = "The base table stores one row per version. The CURRENT_VERSION_FLAG filter is what makes the declared one-row-per-customer grain true; removing it silently multiplies every count."
+region_standard = "REGION_CODE values are fixed-width and resolve fully against the region lookup, which is the signature of an external standard. Both the code and the name are modeled, because the code carries cross-source comparability and the name carries meaning."
+geospatial_caveat = "Latitude and longitude are withheld rather than missing. Candidates exist and are populated, but they originate from a different address record than the mapped address backbone. Revisit once a data owner confirms which address is authoritative."
+performance_warning = "Several aliases resolve to the same physical identifier table. Pre-aggregate by the join key before heavy profiling runs or join cardinality will multiply."
+
+# ============================================================
+# Fields
+#
+# The runtime mapping surface: exactly one expression per
+# attribute, consumed by code. Attributes that are missing,
+# unresolved, or withheld are deliberately absent.
+# ============================================================
+
+[fields]
+
+customer_id      = "c.CUSTOMER_PUBLIC_ID"
+tax_id           = "tax.IDENTIFICATION_NUMBER"
+external_id      = "ext.IDENTIFICATION_NUMBER"
+first_name       = "c.CUSTOMER_FIRST_NAME"
+last_name        = "c.CUSTOMER_LAST_NAME"
+birth_date       = "bdt.DATE_VALUE"
+primary_language = "lgl.LANGUAGE_DOMAIN_CODE"
+region_code      = "ap.REGION_CODE"
+region_name      = "rgn.REGION_NAME"

@@ -1,0 +1,152 @@
+# ============================================================
+# Logical Dataset Definition — GENERIC EXAMPLE
+#
+# A domain model describes an entity abstractly, independent of
+# any source system. Attribute names here are canonical; the
+# physical fields that instantiate them live in the mapping
+# files under configs/mappings/<domain>/.
+#
+# The domain model is deliberately NOT constrained by what any
+# one source happens to contain. A missing field in every source
+# may mean the attribute does not matter, or it may mean the
+# sources are incomplete. That is a governance question, not a
+# modeling one.
+# ============================================================
+
+name = "customer"
+domain = "customer"
+description = "Canonical customer record"
+
+grain = "one_row_per_customer"
+temporal_type = "current_state"
+
+business_key = ["customer_id"]
+
+criticality = "high"
+
+# ============================================================
+# Canonical Fields
+#
+# type       — logical type, not a source type
+# required   — must be populated for the record to be usable
+# sensitive  — carries restricted data; governs handling, not mapping
+# description — the business definition, not the physical one
+# ============================================================
+
+[fields.customer_id]
+type = "string"
+required = true
+sensitive = false
+description = "Enterprise customer identifier"
+
+[fields.tax_id]
+type = "string"
+required = false
+sensitive = true
+description = "Government-issued taxpayer identifier"
+
+[fields.external_id]
+type = "string"
+required = false
+sensitive = false
+description = "Identifier assigned by an external partner or program"
+
+[fields.first_name]
+type = "string"
+required = true
+sensitive = false
+description = "Customer legal first name"
+
+[fields.last_name]
+type = "string"
+required = true
+sensitive = false
+description = "Customer legal last name"
+
+[fields.birth_date]
+type = "date"
+required = true
+sensitive = true
+description = "Customer date of birth"
+
+[fields.primary_language]
+type = "string"
+required = false
+sensitive = false
+description = "Customer preferred spoken language"
+
+# A standardized code and its readable name are modeled as two
+# attributes when the code is an external standard. The code
+# carries cross-source comparability; the name carries meaning.
+# Neither substitutes for the other.
+
+[fields.region_code]
+type = "string"
+required = false
+sensitive = false
+description = "Standardized administrative region code"
+
+[fields.region_name]
+type = "string"
+required = false
+sensitive = false
+description = "Administrative region name corresponding to region_code"
+
+[fields.geo_latitude]
+type = "float"
+required = false
+sensitive = true
+description = "Latitude of the customer's primary address"
+
+[fields.geo_longitude]
+type = "float"
+required = false
+sensitive = true
+description = "Longitude of the customer's primary address"
+
+[fields.loyalty_tier]
+type = "string"
+required = false
+sensitive = false
+description = "Assigned loyalty program tier"
+
+# ============================================================
+# Field Sets
+#
+# Named groupings for profiling, reporting, and access control.
+# A field may appear in more than one set.
+# ============================================================
+
+[field_sets]
+
+identity = [
+    "customer_id",
+    "tax_id",
+    "external_id"
+]
+
+name = [
+    "first_name",
+    "last_name"
+]
+
+location = [
+    "region_code",
+    "region_name",
+    "geo_latitude",
+    "geo_longitude"
+]
+
+demographics = [
+    "birth_date",
+    "primary_language"
+]
+
+# ============================================================
+# Stewardship
+# ============================================================
+
+[governance]
+data_domain = "Customer"
+business_owner = "TBD"
+data_steward = "TBD"
