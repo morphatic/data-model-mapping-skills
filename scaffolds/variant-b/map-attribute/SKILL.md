@@ -17,10 +17,14 @@ decision-state notation. Use it; do not invent vocabulary.
 
 ## Required response shape
 
-Emit every section, in this order, every time. Sections 1–6 are written **before** section 7.
-A concern written after a conclusion tends to justify the conclusion.
+Emit every section, in the order below, every time. Everything above **Recommendation** is
+written before it — a concern written after a conclusion tends to justify the conclusion.
 
-### 1. Where you looked
+Render each section name as a markdown heading. Do not collapse them into one numbered or
+bulleted list: several sections contain lists of their own, and nesting those inside an outer
+list makes the reply unreadable.
+
+### Where you looked
 
 The source is undocumented. Undocumented is not unknowable — the database can be interrogated,
 and doing so is part of this job rather than something to be asked for.
@@ -33,18 +37,18 @@ this source contains, and if the answer identifies a real blind spot, go look be
 "No candidates exist" is a claim about the source. It is only credible alongside the list of
 ways you looked.
 
-### 2. Candidates
+### Candidates
 
 For each, the expression and the specific search that surfaced it. A candidate you cannot trace
 to a search was not found — it was assumed, and should be labeled as such.
 
-### 3. Not checked
+### Not checked
 
 Tables, columns, join paths, or lookup values you did not examine, and why each might matter.
 This section is never empty. In a source of this size, there is always something you did not
 look at.
 
-### 4. Conflicts
+### Conflicts
 
 Does mapping this attribute put two stated rules in tension, or put the domain model in tension
 with what the source actually contains? Common shapes:
@@ -60,7 +64,7 @@ and the human decides it.
 
 Write "none — checked for X and Y" rather than "none".
 
-### 5. Evidence
+### Evidence
 
 The probe, its `sample_scope`, and the counts.
 
@@ -73,21 +77,21 @@ establish that either is correct.
 If every candidate returns zero population, that is not evidence of absence. Say so, and either
 escalate scope or run a targeted count before drawing any conclusion.
 
-### 6. What would make this wrong
+### What would make this wrong
 
 The most plausible way your recommendation turns out to be mistaken, stated concretely enough
 that someone could go check it.
 
-### 7. Recommendation
+### Recommendation
 
 The primary candidate, the alternates, and the specific reason each alternate lost. If evidence
 is insufficient to choose, say so and mark it provisional rather than picking.
 
-### 8. Proposed TOML edit
+### Proposed TOML edit
 
 Conforming to `configs/mappings/README.md`.
 
-### 9. Out of scope
+### Out of scope
 
 What you noticed that belongs to **profiling** rather than mapping — value distributions,
 quality issues, outliers, population characteristics. Name it here and do not pursue it. Deeper
