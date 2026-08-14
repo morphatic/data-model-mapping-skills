@@ -38,6 +38,20 @@ Three separate things must be identified, and in most sources they are three dif
 3. **The join key** — the column other tables use to point at this one. Often a surrogate, often
    not the business identifier, and it is the one that matters for building join paths.
 
+**The identifier may not live in the anchor table.** Some sources model a shared entity — one table
+holding every party to any interaction, where a role determines which domain a given row belongs to.
+In that shape the anchor is a table **plus a qualifying join**: the shared table restricted to rows
+that a satellite table identifies as belonging to this domain. There may be more than one such
+satellite, each covering a different product or program, in which case the qualification is a union
+across them. Satellite tables are frequently named for something other than the domain, so a name
+search for the domain term will not find them.
+
+**Test whether the anchor table is shared before trusting any bounding rule based on connectivity.**
+One query answers it: does this table contain rows that are not entities of this domain, and what
+fraction? If most of its rows are not yours, connectivity is worthless as a filter — nearly
+everything in the source will be reachable from it — and inclusion must be decided purely on whether
+a table carries an attribute of *this* domain.
+
 Cheap tests that discriminate between a real identifier and a decoy:
 
 - **Match against the sample.** The member sample CSV is keyed by a real identifier. The column
@@ -57,6 +71,14 @@ in one sentence what would otherwise cost you an hour.
 **Expand outward, not alphabetically.** Follow join paths from the anchor. Include a table when
 it is reachable from the anchor *and* plausibly carries a domain attribute. Stop expanding a
 branch when it stops being either.
+
+**Two hops is normal. One hop is not a survey.** This is the most expensive mistake available
+here. When this workflow was evaluated, two independent agents each built only depth-1 stars off
+the anchor, and between them missed every attribute living behind a bridge table, a code lookup
+reached through a bridge, or a date dimension — mapping 8 and 9 attributes out of 21 where a person
+surveying the same source reached 20. Anything ranked, dated, decoded, or many-per-entity is
+usually two or three joins out. Follow the chain until it stops paying, and record the hop count
+for every table you include.
 
 **Small tables are cheap to read; large ones are not.** Reference and lookup tables can be read
 in full. Fact and history tables should be examined by structure, and by values only through
@@ -88,11 +110,22 @@ whether names are stored alongside codes or only behind lookups.
 
 Conventions inferred from two examples are hypotheses. Mark them as such.
 
+**Record naming vintage.** Note abbreviations, superseded acronyms, and organization names that have
+since changed. A table named for an agency renamed two decades ago is invisible to anyone searching
+for the current name, and that single fact decides whether every subsequent attribute search in this
+source succeeds or fails. List the dead terms you find alongside their modern equivalents, so the
+next person searches for both.
+
 ### Anchor and identity
 
 State plainly, as three labeled items, the anchor table, the business identifier, and the join
 key — with the evidence that selected each. Downstream mapping needs the business identifier for
 `[identity]` and the join key for `[[joins]]`, and they are usually not the same column.
+
+If the anchor required qualification — a shared entity table restricted by a join to one or more
+satellites — state the qualifying join and the satellites in full, and say what fraction of the
+shared table belongs to this domain. A mapper who does not know the anchor is qualified will
+silently return every party in the source.
 
 Then record:
 
@@ -112,6 +145,14 @@ approximate row count, and which domain attributes it might serve.
 Their shape, what they decode, and the column that carries the human-readable value. Note where
 a code appears to follow an external standard — fixed-width, numeric, a row count matching a
 known universe — and say what would confirm it.
+
+**Enumerate them completely, and unfiltered.** These tables are small; read all of their rows and
+record the full value list. Do **not** filter a lookup or type table by a name pattern taken from
+the attribute you happen to be chasing — that is exactly how a type whose label you would never
+have guessed stays invisible. In the evaluation, both agents searched a shared identifier-type
+table only for names matching the attribute they wanted, and both consequently missed identifier
+types that were sitting in the same table under labels their search terms did not contain. A single
+unfiltered enumeration would have handed them several attributes at once.
 
 ### Tables whose names do not announce them
 

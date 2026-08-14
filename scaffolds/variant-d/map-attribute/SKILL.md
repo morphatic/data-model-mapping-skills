@@ -37,6 +37,9 @@ Render each section name as a markdown heading. Do not collapse them into one nu
 bulleted list: several sections contain lists of their own, and nesting those inside an outer
 list makes the reply unreadable.
 
+This reply is the deliverable. Writing a summary into a project document as well is useful, but the
+reasoning must be here in full — anything that lives only in a file was not said.
+
 ### What the survey gave you
 
 The leads it held for this attribute, and whether each still exists — surveys go stale and
@@ -84,6 +87,12 @@ with what the source actually contains? Common shapes:
 If a conflict exists, propose the resolution options and recommend one. Where the resolution
 is to change the domain model rather than the mapping, say so — that is a legitimate outcome
 and the human decides it.
+
+**If the conflict is not settled by the evidence, end this section with a direct question and stop
+there.** Do not carry an unsettled conflict through to a recommendation. In fourteen evaluated runs
+of this workflow, agents named conflicts accurately, recommended a resolution, applied it, and moved
+on — and not once asked the human anything. A recommendation the human can only decline by
+noticing it is not a decision they made.
 
 Write "none — checked for X and Y" rather than "none".
 

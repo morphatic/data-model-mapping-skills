@@ -86,6 +86,23 @@ for time and volume.
 - **Convention conformance** — output parses, uses only defined vocabulary, omits nothing required
 - **Efficiency** — wall-clock and query count. Not a footnote. At several hundred units of work,
   twelve minutes each is a project and forty-five is not
+- **Evidence validity** — do the numbers in the artifact survive a sanity check against each other?
+  This is the axis most likely to be missing, and the most damaging to omit. In one completed run a
+  variant's probes returned zero population for nearly everything it touched, because of a single
+  wrong-but-legal SQL predicate. It scored well on sample discipline and inference quality on those
+  very attributes, because both were judged from the transcript. The failure was visible only by
+  cross-checking the artifact's own counters against each other.
+
+### Two lessons about axis design, learned the hard way
+
+**Score where the output lands, or you will measure the wrong thing.** One variant wrote its
+analysis into a document while its chat reply was a bare changelog. Scored live from the chat, it
+looked like it raised no concerns; it had in fact named every conflict, in the file. Decide up front
+which surfaces count as output, and read all of them before scoring.
+
+**Separate *noticed* from *escalated*.** Both are worth having and they are different behaviors. In
+fourteen runs, agents named conflicts accurately, recommended resolutions, applied them, and asked
+the human nothing at all. A single "raises concerns" axis scores that as success.
 
 ### An axis that is hard to score and worth keeping
 

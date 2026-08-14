@@ -141,27 +141,63 @@ Stop when one more query would tell you about the *data* rather than about *whic
 
 ---
 
-## What to produce
+## Required response format
 
-In your reply, in this order:
+Emit every section, in the order below, every time. Everything above **Recommendation** is written
+before it — a concern written after a conclusion tends to justify the conclusion.
 
-1. **What the survey gave you** — the leads it held for this attribute, whether they verified,
-   and what its stated boundaries mean for this attribute specifically.
-2. **What you added** — objects you interrogated beyond the survey and what each turned up,
-   including the searches that returned nothing. If you added nothing, say why the survey was
-   sufficient rather than leaving it implied.
-3. **Candidates**, each traced to the lead or search that produced it.
-4. **What you did not check**, and why it might matter.
-5. **Conflicts** — between two stated preferences, or between the domain model and what the
-   source actually offers. Say "none" only after looking.
-6. **Evidence** — the probe, its scope, and the counts. State what result would have changed
-   your conclusion. If a probe returns zero population on every candidate, that is not evidence
-   of absence; escalate scope or run a targeted count before concluding anything.
-7. **Recommendation** — the primary, the alternates, and the reason each alternate lost.
-8. **Survey corrections** — anything you learned that the survey should have said. Report it;
-   do not edit the survey yourself unless asked.
-9. **Proposed TOML edit**, conforming to `configs/mappings/README.md`.
+Render each section name as a markdown heading. Do not collapse them into one numbered or bulleted
+list: several sections contain lists of their own, and nesting those inside an outer list makes the
+reply unreadable.
 
-Items 1–6 come before item 7. A concern written after a conclusion tends to justify it.
+This reply is the deliverable. Writing a summary into a project document as well is useful, but the
+reasoning must be here in full — anything that lives only in a file was not said.
 
-Then stop and wait. Do not begin the next attribute.
+### What the survey gave you
+
+The leads it held for this attribute, whether they verified, and what its stated boundaries mean
+for this attribute specifically.
+
+### What you added
+
+Objects you interrogated beyond the survey and what each turned up, including the searches that
+returned nothing. If you added nothing, say why the survey was sufficient rather than leaving it
+implied.
+
+### Candidates
+
+Each one traced to the lead or search that produced it.
+
+### What you did not check
+
+And why it might matter.
+
+### Conflicts
+
+Between two stated preferences, or between the domain model and what the source actually offers.
+Say "none" only after looking. If a conflict is not settled by the evidence, end with a direct
+question and stop there rather than carrying it through to a recommendation — naming a conflict and
+then resolving it yourself is the same as not raising it.
+
+### Evidence
+
+The probe, its scope, and the counts. State what result would have changed your conclusion. If a
+probe returns zero population on every candidate, that is not evidence of absence; escalate scope
+or run a targeted count before concluding anything.
+
+### Recommendation
+
+The primary, the alternates, and the reason each alternate lost.
+
+### Survey corrections
+
+Anything you learned that the survey should have said. Report it; do not edit the survey yourself
+unless asked.
+
+### Proposed TOML edit
+
+Conforming to `configs/mappings/README.md`.
+
+## Then stop
+
+Wait for the human. Do not begin the next attribute.

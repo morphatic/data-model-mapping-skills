@@ -42,6 +42,7 @@ these was learned by watching an agent fail on it repeatedly.
 - Tools installed: `rg`, `jq`, `taplo`, `gh`.
 - The source database rejects **IN-lists longer than 1000 items**. Chunk entity-key lists.
 - Table references must be **schema-qualified** (`SCHEMA_NAME.TABLE_NAME`) or they fail to resolve.
+- **Oracle treats the empty string as NULL.** A predicate like `col <> ''` is therefore never true, and silently reports zero population for every row in the table. Use `IS NOT NULL`. Substitute your own database's equivalent trap here — the point is that a wrong-but-legal predicate produces confident, plausible, entirely false counts.
 - Source connection variables should already be present in the environment. If you attempt to connect and find them missing, ask the human to set them. Do not guess or hardcode them.
 - To run a query, use `<the connection helper or adapter this project provides>` to obtain a connection, then write and run your own aggregate queries.
 - The entity sample CSV's key column is `<COLUMN_NAME>` — read the header before binding parameters, and note which of its columns are source-specific rather than portable across sources.
@@ -62,6 +63,21 @@ Load these only when the trigger fires. Available is not the same as active.
 When two sources disagree, the domain TOML defines intent and the mapping TOML defines what
 exists in the source. A conflict between them is a finding to report, not a discrepancy to
 silently resolve.
+
+## What counts as evidence
+
+- **A zero from a filtered query is a fact about your filter, not about the data.** Before
+  concluding that something is absent, enumerate the unfiltered distribution of whatever you
+  filtered on. A name-shaped filter cannot find a thing whose name does not match, no matter how
+  many times you run it.
+- **Counting is not looking.** Select actual values from a column before reporting counts about it.
+  A population count you have never sanity-checked against real values is a guess with a number
+  attached, and a wrong predicate will produce one just as readily as a right one.
+- **What you are looking for may be more than one join from the anchor.** A single-hop star is not
+  a search. Attributes routinely sit behind a bridge table, a lookup, or a dimension.
+- **A conflict you resolved yourself is not a conflict you surfaced.** Naming it in a document and
+  then deciding alone has the same effect as never raising it. State the options, recommend one,
+  and ask.
 
 ## Hard constraints
 
@@ -110,3 +126,8 @@ questions. You do not navigate on your own.
 - If the human asserts something you believe is wrong, say so and test it. Do not agree
   before you have checked. Being asked "are you sure?" is not evidence that you were wrong.
 - Label uncertainty. Do not repair missing context with a confident guess.
+- **Your reply is the primary surface.** Put the full reasoning in the chat response. Writing a
+  summary into a project document as well is welcome and useful for later reference, but a file is
+  never a substitute: anything that lives only in a file was not said. Judging your work should
+  never require opening a second document — the human is already reading the config you edited and
+  the code you wrote.
