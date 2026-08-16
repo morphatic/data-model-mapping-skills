@@ -84,8 +84,26 @@ for every table you include.
 in full. Fact and history tables should be examined by structure, and by values only through
 the member sample.
 
+**Report values, not counts of values.** A distinct count is not a finding. "Thirteen distinct type
+keys appear across the sampled entities" tells a mapper nothing they can act on; the thirteen labels
+tell them which attributes this source carries. Whenever you count distinct values of a
+discriminator, code, or type column, print the values themselves. In the evaluation, an agent ran
+exactly the join that would have resolved three unmapped attributes, reported how many distinct type
+keys it had matched, discarded the labels, and then recorded all three attributes as absent from the
+source.
+
 **Say what you skipped.** A survey that claims completeness is worse than one with an honest
 boundary.
+
+**But your boundary is drawn from the inside.** A *Not examined* section can only list what you
+know you skipped, which is never the category that hurts. In the evaluation, two agents each
+declared the survey complete — with honest-sounding boundaries, explicit hop counts, and unfiltered
+lookup reads — while both had missed the same generic-container structures, and with them the six
+attributes that lived behind those structures. Neither *Not examined* section mentioned any of it.
+Both agents found the missing branch within one pass of a human naming it out loud.
+
+So do not judge completeness against the source, whose edges you cannot see. Judge it against the
+domain model, which is finite and in front of you. See **Before you call it done**.
 
 ## The artifact
 
@@ -156,15 +174,28 @@ unfiltered enumeration would have handed them several attributes at once.
 
 ### Tables whose names do not announce them
 
-A section that exists because it is the one most often missing.
+A section that exists because it is the one most often missing — and the one most often filled in
+wrongly. **This is a probe to run, not a slot to describe findings in.** When it was evaluated, both
+agents populated it with bridge tables they had already found by name, and neither read it as an
+instruction to go looking.
 
 Some sources keep domain content in tables whose names and columns are entirely generic — a
 value table keyed by an abstract type, a single shared lookup serving unrelated concepts, an
 attribute-value pair structure, a JSON or enum column. These are invisible to any search over
 names. They are found only by reading what is inside them.
 
-List what you found this way, what the discriminating key is, and which values in it correspond
-to domain concepts. If you found none, say how you checked.
+**The sweep.** For every table in the neighborhood carrying a type or code discriminator beside a
+payload column — a `*_TYPE_KEY`, a `*_TYPE_CODE`, an abstract `*_KEY` paired with a value column —
+enumerate that discriminator's values *as they appear on sampled entities*, and list them in full.
+Not how many there are. The values.
+
+Run the sweep before you write the attribute leads, and run it without reference to the attributes
+you are hoping to find. A discriminator filtered by a term you already had in mind can only return
+what you already knew.
+
+For each structure the sweep turns up, record the discriminating key, the join path to it, and which
+of its values correspond to domain concepts. If the sweep turned up nothing, name the tables you
+swept and say what their discriminators contained.
 
 ### View definitions worth reading
 
@@ -176,8 +207,20 @@ reveal.
 ### Attribute leads
 
 For each attribute in the domain model: candidate table and column in `TABLE.COLUMN` form, the
-join path if it is not on the anchor, and a one-line note on why it is a lead. Where nothing was
-found, say so explicitly — that is a finding, not a gap in the survey.
+join path if it is not on the anchor, **the hop count of that lead**, and a one-line note on why it
+is a lead. Hop count per lead matters more than hop count per table: it records how far out the
+attributes actually live, which is what tells the next person where to start looking.
+
+**"Not found" is the most expensive claim in this document.** It is the sentence that stops the next
+person from looking. Before writing it for any attribute, do two things:
+
+1. Search the lookup and discriminator values *you enumerated in this survey* for the attribute's
+   name and its obvious synonyms. In the evaluation, an agent extracted a 105-row type dictionary
+   holding an exact match for the attribute it was chasing, saved that extract into the survey's own
+   folder, and recorded the attribute as not present in the source.
+2. Confirm the sweep above actually ran, and name the discriminators it read.
+
+A name search returning no hits is not the evidence. It is the thing that has to be overcome.
 
 Do not rank leads or select a primary. That is the mapper's job.
 
@@ -185,6 +228,22 @@ Do not rank leads or select a primary. That is the mapper's job.
 
 Tables, schemas, or structures deliberately left out, and the condition under which they would
 be worth revisiting.
+
+## Before you call it done
+
+Completeness cannot be judged against the source; you cannot see its edges. Judge it against the
+domain model, which is finite and sitting in front of you.
+
+Walk the attribute list in `configs/domains/<domain>.toml` and check every one:
+
+- Each attribute has either a lead with a join path and a hop count, or a "not found" that has
+  survived both tests in **Attribute leads**.
+- Every generic container the sweep identified has its discriminator values listed, not counted.
+- No attribute is recorded as absent while a value you enumerated in this survey names it.
+
+If any of those fails you are not done, whatever the section structure looks like. A survey with
+every required section filled in and an entire branch of the source missing reads exactly like a
+finished one. That is the failure this check exists to catch.
 
 ## Working rhythm
 
