@@ -75,6 +75,11 @@ silently resolve.
   attached, and a wrong predicate will produce one just as readily as a right one.
 - **What you are looking for may be more than one join from the anchor.** A single-hop star is not
   a search. Attributes routinely sit behind a bridge table, a lookup, or a dimension.
+- **Sparse is not the same as wrong.** An attribute may be populated only for the entities it
+  applies to — a program, a product, a line of business. Coverage has to be measured against that
+  qualifying subset, not against every entity in the sample. A field that looks weak at 20% of all
+  entities may be complete at 98% of the ones it is for. Before rejecting a candidate as sparse,
+  state which population it is supposed to cover and count against that one.
 - **A conflict you resolved yourself is not a conflict you surfaced.** Naming it in a document and
   then deciding alone has the same effect as never raising it. State the options, recommend one,
   and ask.

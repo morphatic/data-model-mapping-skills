@@ -120,6 +120,19 @@ What was surveyed, when, against which schema, by what means, and what remains u
 Things a human or SME must answer. This section exists so uncertainty has somewhere to live
 other than a confident guess.
 
+Three kinds belong here, and all three are cheap for a human to settle — often in one sentence.
+Raising them is not an imposition. Answering them on their behalf is not efficiency.
+
+1. **Facts about the world that a database cannot contain.** The shape of an external code
+   standard, what a superseded acronym stood for, what format an issuing authority uses, whether
+   two systems were ever meant to agree. No amount of querying produces these, and a person who
+   works here knows most of them offhand.
+2. **Labels you cannot adjudicate.** When an enumerated discriminator offers several values and
+   their names do not tell you which one belongs to this domain, list the values with their
+   populations and ask. Someone who knows this source will recognize it on sight.
+3. **Scope exceptions you want.** If a question genuinely cannot be answered inside the sample,
+   say what you would run, what it would settle, and wait.
+
 ### Source conventions
 
 Patterns that hold across the source, each with the evidence that established it — naming
@@ -197,6 +210,12 @@ For each structure the sweep turns up, record the discriminating key, the join p
 of its values correspond to domain concepts. If the sweep turned up nothing, name the tables you
 swept and say what their discriminators contained.
 
+**If the labels do not adjudicate, do not choose.** Generic containers accumulate generic labels for
+specific things. The value carrying what a domain needs is frequently the one whose name gave no
+hint at all, while the plausibly-named values are empty, deprecated, or belong to a different
+domain. Rank nothing on how a label reads. List the values with their populations and put the
+question under **Open questions**, where a human settles it in a sentence.
+
 ### View definitions worth reading
 
 Views are usually written by the organization to make a vendor's schema usable, so their SQL
@@ -221,6 +240,13 @@ person from looking. Before writing it for any attribute, do two things:
 2. Confirm the sweep above actually ran, and name the discriminators it read.
 
 A name search returning no hits is not the evidence. It is the thing that has to be overcome.
+
+**Where a lead applies to only part of the domain — one program, product, or line of business —
+say which part, and report its population within that subset rather than across all sampled
+entities.** An identifier issued by a program covers the members of that program and nobody else.
+Measured against everyone, it looks like a sparse and unpromising field; measured against the
+population it is for, it may be nearly complete. A lead recorded without its qualifying subset
+invites the mapper to reject it on a denominator that was never the right one.
 
 Do not rank leads or select a primary. That is the mapper's job.
 
