@@ -81,6 +81,16 @@ hint, while the obviously-named ones turn out to be empty, deprecated, or owned 
 If the labels do not adjudicate, list them with their populations under **What I need from you**
 rather than picking the one that sounds right.
 
+**A lookup's own row counts point the wrong way.** Reading a code table tells you what the source
+*could* represent. Only counting what entities actually carry tells you what it *does*. These come
+apart badly: a shared lookup will often devote hundreds of rows to a fine-grained standard nobody
+populates, while the family that holds the real data is a handful of local values that look
+unofficial. In evaluation, both variants read a lookup unfiltered, correctly identified the
+official-looking family, filtered to it, got zero rows, and reported the attribute absent — while
+the family carrying it sat in the same table under a scruffier prefix. **Enumerate the lookup, then
+group the bridge by family and count members.** The second step is not optional, and the first is
+misleading without it.
+
 ### Not checked
 
 Tables, columns, join paths, or lookup values you did not examine, and why each might matter.
@@ -113,14 +123,28 @@ Write "none — checked for X and Y" rather than "none".
 
 The probe, its `sample_scope`, and the counts.
 
+**You must actually query the source in this turn.** A recommendation supported only by the survey
+is not a mapping, it is a summary of a document someone else wrote. The survey is a lead sheet: it
+tells you where to point a probe, never what the probe would have returned. In evaluation, agents
+repeatedly produced complete, well-argued, correctly formatted recommendations having run **zero
+queries** — reasoning entirely from the survey and from the schema catalog. If you find yourself
+about to recommend without a probe, that is the signal to run one, not evidence that none was
+needed. If you genuinely believe no probe is warranted, say so explicitly and say why; do not let it
+pass unmentioned.
+
 Then state, in one sentence: **what result would have changed your recommendation.** If no
 possible result would have changed it, you did not run a probe, you ran a confirmation.
 
 Agreement between two fields establishes that they are consistent with each other. It does not
 establish that either is correct.
 
-**State the denominator.** A population figure means nothing until you say what it is a fraction
-of. If the attribute applies only to part of the domain, count against that part.
+**State the denominator, and build the sample to match it.** A population figure means nothing
+until you say what it is a fraction of. Where an attribute applies only to part of the domain — one
+program, product, or line of business — **restrict the sample to that part before you count, rather
+than counting across everyone and interpreting the shortfall.** Check what the sample file already
+carries: it frequently holds the very column that identifies the qualifying subset, which makes
+this one predicate rather than a research problem. A drifting-down coverage number across
+candidates that all apply to a subpopulation tells you nothing about any of them.
 
 If every candidate returns zero population, that is not evidence of absence — and widening the
 sample is the *second* thing to try. **Widen the hypothesis before you widen the rows.** A zero
@@ -193,13 +217,55 @@ Write "none" if the survey held up.
 
 ### Proposed TOML edit
 
-Conforming to `configs/mappings/README.md`.
+Conforming to `configs/mappings/README.md`. Read it before writing, every time — this is the most
+frequently failed part of the response, and the same two defects recur:
+
+- **Every candidate needs its `[[sources]]` and `[[joins]]` entries.** A candidate whose table is
+  not declared is not addressable.
+- **A candidate expression is almost always a plain aliased field reference** — `moi.field_name`.
+  If you are writing a `CASE`, a `COALESCE`, or a concatenation, stop: you are encoding a decision
+  into the expression that belongs in the decision state, or merging fields that the model wants
+  kept apart.
+
+Apply the edit as well as proposing it, along with any survey correction you named above. A
+correction that is only described has not been made.
 
 ### Out of scope
 
 What you noticed that belongs to **profiling** rather than mapping — value distributions,
 quality issues, outliers, population characteristics. Name it here and do not pursue it. Deeper
 characterization of the data is a later phase.
+
+## If this turn keeps going
+
+A hard attribute takes several exchanges. **This is where the work reliably falls apart**, and it
+falls apart the same way every time: by the fourth or fifth exchange the response format is gone,
+the sample constraint has been forgotten, scratch files are accumulating in the repo, and the
+original question — *which field should this attribute map to* — has been replaced by whatever
+narrower thing the last message was about.
+
+In evaluation this was the single largest failure. On the hardest attribute, agents ran the right
+probe, obtained a near-perfect result for the correct field, and then **did not recommend it**,
+because by that point they were answering the most recent sub-question rather than mapping the
+attribute. The evidence was there. The goal was not.
+
+So on **every** exchange after the first, before you write anything:
+
+1. **Re-emit the full required response shape.** Every section, every time — not a freeform
+   paragraph continuing the conversation. Later exchanges are where the sections earn their keep,
+   not where they become redundant.
+2. **Restate the attribute you are mapping**, in one line, at the top. If your last three messages
+   were about a single candidate, that line is what pulls you back out.
+3. **Re-read the constraints you are working under.** Sample scope in particular: a widened or
+   improvised sample from an earlier exchange does not carry forward as approved, and a scratch
+   file written mid-turn belongs in a temp directory outside the project, not in the repo.
+4. **Ask whether new evidence changes the recommendation.** A candidate that tested well three
+   exchanges ago and has not been beaten is still your primary. Say so plainly rather than letting
+   it drop off because the conversation moved on.
+
+If a turn has become tangled enough that you cannot do this cleanly, say so and propose starting
+the attribute fresh. That is a cheap, reasonable request and it is a better outcome than a
+recommendation nobody can trust.
 
 ## Then stop
 

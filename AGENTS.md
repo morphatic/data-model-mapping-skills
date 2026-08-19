@@ -10,12 +10,17 @@ skill-building repo. The skills here are the product; there is no application to
 scaffolds/
   shared/copilot-instructions.md   always-on working agreements; installs to .github/
   survey-source/SKILL.md           builds a localized model of an undocumented source
-  variant-a/ variant-b/            two competing map-attribute designs, unaided
-  variant-c/ variant-d/            the same two designs, survey-aware
-  INSTALL.md                       placement, eval protocol, contamination control
-resources/                         generic config examples the skills expect to find
-domain_mapping_skill_eval_rubric.md   scoring instrument for comparing variants
+  map-attribute/SKILL.md           maps one domain attribute — the shipped design
+  variant-a/ … variant-d/          superseded candidates, kept as an evaluation record
+  INSTALL.md                       placement and usage
+  OPERATORS-MANUAL.md              how to run a session; context resets and working notes
+resources/                         generic config examples and templates
+domain_mapping_skill_eval_rubric.md   scoring instrument used to compare the variants
 ```
+
+`map-attribute/` is what to install. The four `variant-*` directories are the designs it was
+selected from and are kept only so the evaluation is reproducible — they are not maintained. See
+the design-history note in `INSTALL.md` for what each one tested and what the comparison showed.
 
 The skills target GitHub Copilot and install to `.github/skills/<name>/SKILL.md` in the
 *consuming* project, not here. `shared/copilot-instructions.md` installs to

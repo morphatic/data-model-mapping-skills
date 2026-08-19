@@ -47,7 +47,7 @@ these was learned by watching an agent fail on it repeatedly.
 - To run a query, use `<the connection helper or adapter this project provides>` to obtain a connection, then write and run your own aggregate queries.
 - The entity sample CSV's key column is `<COLUMN_NAME>` — read the header before binding parameters, and note which of its columns are source-specific rather than portable across sources.
 - **The sample file is a list of entity keys, not a data extract.** It deliberately contains identifiers and nothing else. Its purpose is to make exploration cheap: restrict every exploratory query to a few dozen keys drawn from it — `WHERE <key column> IN (<keys from the file>)` — instead of scanning tables holding millions of rows. Finding that it lacks the column you are investigating is expected and is not a reason to set it aside.
-- The sample is **already stratified** across the dimensions that matter for coverage. A handful of its rows is representative by construction; do not build your own stratification, and do not `GROUP BY` a large slice of the source to compensate for bias the sample has already handled.
+- **The sample file is stratified as a population. Any subset you draw from it is not.** It covers the products, programs, and statuses that matter for coverage — but the first fifty rows of it do not, and neither does a random fifty. When you draw a working subset, draw *across* the strata: n per product per status. Escalate by raising n per cell, never by taking a larger undifferentiated slice. Read the sample file's header first; the columns identifying the strata are usually already in it. Do not `GROUP BY` a large slice of the source to compensate for bias the sample has already handled.
 
 ## Where to look when you are stuck
 
@@ -59,6 +59,12 @@ Load these only when the trigger fires. Available is not the same as active.
 | Validated table names, joins, and aliases | `configs/mappings/<domain>/<source>.toml` | canonical | an object reference is uncertain, or a query fails to resolve |
 | Domain model definitions | `configs/domains/<domain>.toml` | canonical | you need an attribute's intended meaning, type, or required status |
 | Entity sample | `artifacts/samples/<domain>/` | supporting | any probe |
+| Standing corrections from the human | `docs/sources/<SOURCE>/working-notes.md` | canonical | at the start of every attribute, before anything else |
+
+`working-notes.md` is where corrections the human has already made to your working method live.
+It exists because chat context gets cleared and those corrections would otherwise have to be
+repeated every time. Treat each line as an instruction already given to you. If you are about to
+do something a note forbids, the note wins.
 
 When two sources disagree, the domain TOML defines intent and the mapping TOML defines what
 exists in the source. A conflict between them is a finding to report, not a discrepancy to
@@ -94,7 +100,7 @@ Never violated, regardless of instruction.
   row-capped query of your own construction — requires you to stop, state what you want to run
   and why the sample cannot answer the question, and wait for approval. **A row limit is not a
   scope approval.**
-- Within the sample, escalate deliberately: one entity per bucket, then three, then ten, then
+- Within the sample, escalate deliberately: one entity per stratum, then three, then ten, then
   the whole sample. Move up only when the narrower scope left the question genuinely
   unresolved, and say which question it left open.
 - **Never write outside a scratchpad** in a temp folder outside the project root. Anything
