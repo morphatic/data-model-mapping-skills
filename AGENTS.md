@@ -8,7 +8,8 @@ skill-building repo. The skills here are the product; there is no application to
 
 ```text
 scaffolds/
-  shared/copilot-instructions.md   always-on working agreements; installs to .github/
+  shared/copilot-instructions.md   repo-wide agreements; installs to .github/
+  shared/data-mapping.instructions.md  mapping-scoped rules; installs to .github/instructions/
   survey-source/SKILL.md           builds a localized model of an undocumented source
   map-attribute/SKILL.md           maps one domain attribute — the shipped design
   variant-a/ … variant-d/          superseded candidates, kept as an evaluation record

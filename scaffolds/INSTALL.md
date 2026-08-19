@@ -29,13 +29,25 @@ The repo may be cloned anywhere, but these files only work at these paths in the
 project:
 
 ```text
-<repo-root>/.github/copilot-instructions.md            ← shared/copilot-instructions.md
-<repo-root>/.github/skills/survey-source/SKILL.md      ← survey-source/SKILL.md
-<repo-root>/.github/skills/map-attribute/SKILL.md      ← map-attribute/SKILL.md
+<repo-root>/.github/copilot-instructions.md                        ← shared/copilot-instructions.md
+<repo-root>/.github/instructions/data-mapping.instructions.md      ← shared/data-mapping.instructions.md
+<repo-root>/.github/skills/survey-source/SKILL.md                  ← survey-source/SKILL.md
+<repo-root>/.github/skills/map-attribute/SKILL.md                  ← map-attribute/SKILL.md
 ```
 
-`.github/copilot-instructions.md` auto-loads only from the **workspace root**. If the clone lands in
-a subfolder, copy rather than symlink.
+`.github/copilot-instructions.md` auto-loads on **every** task, from the **workspace root** only. If
+the clone lands in a subfolder, copy rather than symlink.
+
+`.github/instructions/*.instructions.md` auto-load **conditionally**, when the conversation touches
+files matching their `applyTo` glob. That is the scope restriction: everything that would be wrong
+outside discovery and mapping lives there rather than in the repo-wide file. Check the glob against
+your own layout — it ships as `configs/**,docs/sources/**,artifacts/samples/**`.
+
+Two caveats. Conditional instruction files are a **VS Code and Visual Studio** feature; on other
+Copilot surfaces they will not load, and you should fold their contents into
+`copilot-instructions.md` instead. And because the glob triggers on files in context rather than on
+intent, it may not have fired when someone opens a fresh chat and types `/map-attribute` with
+nothing attached — which is why both skills also name the file explicitly. Belt and braces.
 
 Then create the working-notes file the skills expect, from
 [../resources/working-notes-template.md](../resources/working-notes-template.md):
@@ -77,7 +89,8 @@ push. The manual explains why, and it is the single highest-value operating rule
 
 | File | Role |
 | --- | --- |
-| `shared/copilot-instructions.md` | always-on: environment facts, hard constraints, what counts as evidence |
+| `shared/copilot-instructions.md` | always-on, every task: environment facts, safety constraints, working rhythm |
+| `shared/data-mapping.instructions.md` | conditional, mapping paths only: terminology, sample rules, query scope, evidence standards, preferences |
 | `survey-source/SKILL.md` | one localized model of a source, per domain, reused by every attribute |
 | `map-attribute/SKILL.md` | one attribute, one turn, eight sections, then stop |
 | `docs/sources/<SOURCE>/working-notes.md` | standing corrections that survive a context clear |

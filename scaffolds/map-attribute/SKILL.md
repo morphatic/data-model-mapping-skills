@@ -12,6 +12,10 @@ There is no procedure here and no sequence of stages. How you find candidates an
 write is yours to decide — you are good at that. What is fixed is the **shape of the answer**, and
 the small number of situations that stop the turn.
 
+Read `.github/instructions/data-mapping.instructions.md` before starting. It carries the
+environment facts, scope constraints, and evidence standards this workflow assumes. Those
+instructions are scoped to mapping paths and may not have auto-loaded yet.
+
 Read `configs/mappings/README.md` before writing TOML. It defines the allowed values for
 `candidate_resolution_mode`, `selection_status`, candidate `status`, `sample_scope`, and the
 decision-state notation. Use it; do not invent vocabulary.

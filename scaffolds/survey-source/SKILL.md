@@ -15,6 +15,10 @@ This is **not** mapping. You are not choosing fields or deciding which candidate
 producing leads, with enough structure behind them that adjudication becomes cheap. If you find
 yourself weighing two candidates against each other, stop — that belongs to `/map-attribute`.
 
+Read `.github/instructions/data-mapping.instructions.md` before starting. It carries the
+environment facts, scope constraints, and evidence standards this workflow assumes. Those
+instructions are scoped to mapping paths and may not have auto-loaded yet.
+
 ## Scope, and how to keep it
 
 The source has hundreds of tables and most are irrelevant. A census is worthless; the useful
