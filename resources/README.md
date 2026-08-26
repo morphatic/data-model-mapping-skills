@@ -6,9 +6,12 @@ the `customer` domain and `warehouse` source are invented, and every table, colu
 is fabricated.
 
 ```text
-configs/domains/customer.toml              a domain model
-configs/mappings/customer/warehouse.toml   that domain mapped onto one source
-eval-rubric-template.md                    scoring instrument for comparing skill variants
+configs/domains/customer.toml                      a domain model
+configs/mappings/customer/warehouse.toml           that domain mapped onto one source — simple
+configs/domains/customer_contact.toml              a finer-grained companion domain
+configs/mappings/customer_contact/warehouse.toml   that domain mapped — discriminated
+eval-rubric-template.md                            scoring instrument for comparing skill variants
+working-notes-template.md                          standing corrections file the skills read first
 ```
 
 Copy them into a project as `configs/domains/<domain>.toml` and
@@ -37,7 +40,7 @@ common and expensive mistake, and a column bearing the domain's name may be neit
 declared one-row-per-customer grain is true only because of the current-version filter. Remove
 it and every count silently multiplies.
 
-**Four decision states, deliberately distinct:**
+**Five decision states, deliberately distinct:**
 
 | State | Shown by | In `[fields]`? |
 | --- | --- | --- |
@@ -45,10 +48,33 @@ it and every count silently multiplies.
 | unresolved | `external_id` — provisional, semantics unconfirmed | yes, flagged |
 | withheld | `geo_latitude` — candidate exists, coherence unverified | no |
 | missing in source | `loyalty_tier` — nothing found, and how that was checked | no |
+| discriminated | `contact_value` — several fields, each correct for a subset of rows | no, in `[branches.fields]` |
 
 Withheld is not missing. A withheld attribute has a real, populated candidate that is being
 deliberately held back for a governance reason, with a named condition for revisiting. Losing
 that distinction turns a decision into an absence.
+
+Discriminated is not unresolved either, and the difference is the more expensive one to miss.
+Several fields each being correct for a different subset of rows is a complete answer, not a
+failed one. Recording it as unresolved understates what is known, and the pressure that creates
+tends to come out in the wrong place — as a redesign of the domain model to make one-field-per-
+attribute true again, which imports the source's shape into a model whose purpose is to be
+independent of it.
+
+**One canonical attribute may need several physical fields, and that belongs in the mapping.**
+The discriminated example shows the mechanism: `[grain]` declares that the file emits one row per
+branch member rather than one per business key, and each `[[branches]]` block pairs a set of rows
+with the expressions valid for them. `implies` asserts the discriminator when the source stores it
+nowhere; `when` tests a predicate when it does. The phone and fax branches are the case that needs
+both — same column, same join path, separated only by a type code, then labeled differently.
+
+**The `when` predicate grammar is restricted so it is portable by construction.** Equality, `IN`,
+`LIKE`, null tests, and their negations — the intersection of Oracle, Databricks SQL, Postgres,
+and T-SQL. No functions, no date arithmetic, no coalescing, no author-written `OR`. Anything
+richer encodes a decision, and decisions belong in a candidate block where someone reviews them.
+Negation is defined as set complement *including* nulls, because a bare `NOT IN` silently drops
+null rows — and in a discriminated mapping a row matching no branch does not merely count wrong,
+it vanishes from the output with no error.
 
 **A standardized code and its readable name are two attributes, not two candidates.** When a
 code turns out to be an external standard, it carries cross-source comparability the name does

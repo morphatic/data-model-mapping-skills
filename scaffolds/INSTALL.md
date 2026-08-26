@@ -63,7 +63,7 @@ Start it before the first session, not after the first correction.
 **Once per source and domain**, build the survey:
 
 ```bash
-/survey-source HRP member
+/survey-source WAREHOUSE customer
 ```
 
 It stops for anchor confirmation before expanding — that checkpoint is load-bearing, and answering
@@ -75,7 +75,7 @@ makes a context reset cheap later.
 **Then, one attribute at a time**, in a fresh session each:
 
 ```bash
-/map-attribute ssn
+/map-attribute tax_id
 ```
 
 The skill reads the working notes, then the survey, then works. It emits eight fixed sections and
@@ -95,9 +95,18 @@ push. The manual explains why, and it is the single highest-value operating rule
 | `map-attribute/SKILL.md` | one attribute, one turn, eight sections, then stop |
 | `docs/sources/<SOURCE>/working-notes.md` | standing corrections that survive a context clear |
 | `OPERATORS-MANUAL.md` | resets, sequencing, and how to steer without burning the turn |
+| `MIGRATION-discriminated-mapping.md` | only for installations predating branch grammar; not needed for a fresh install |
 
 `survey-source` ships with `disable-model-invocation: true` so it cannot load itself into a mapping
 run uninvited.
+
+**A note on the mapping conventions file.** Both skills defer to a `configs/mappings/README.md` in
+the consuming project for the allowed decision states and vocabulary, and that file is not shipped
+here — a project has to write one. As of this version the skills assume it documents **five**
+decision states, the fifth being *discriminated*: one canonical attribute served by several physical
+fields, selected by a discriminator, declared with `[grain]` and `[[branches]]`. The generic examples
+in `resources/configs/mappings/` show both a simple and a discriminated mapping. If your conventions
+file documents only four states, `map-attribute` will name a state it cannot resolve.
 
 ## Design history
 

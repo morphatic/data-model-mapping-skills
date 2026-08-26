@@ -1,0 +1,276 @@
+# ============================================================
+# Logical-to-Physical Data Mapping — GENERIC EXAMPLE
+#
+# A DISCRIMINATED mapping. Its companion, customer/warehouse.toml,
+# is a simple mapping: one row per customer, one expression per
+# attribute in [fields].
+#
+# This file is the other case. The source stores contact payload
+# in three unrelated places — an email column on the contact
+# table, a phone number on a phone fact, and the same phone fact
+# again for faxes — and no single column answers "what is the
+# contact value" for every row.
+#
+# The old rule (exactly one physical field per attribute) had no
+# way to say that, and the pressure came out as domain redesign:
+# split the domain until every attribute has one source column.
+# That imports the source's shape into a model whose whole
+# purpose is to be independent of it. Branches are the relief
+# valve, placed in the mapping layer where source shape belongs.
+#
+# Demonstrates: [grain], [[branches]], `implies` vs `when`,
+# branch-invariant [fields], null-inclusive negation, and the
+# fifth decision state — discriminated.
+#
+# Section order follows configs/mappings/README.md.
+# ============================================================
+
+system = "warehouse"
+
+[defaults]
+catalog = "EXAMPLE_CATALOG"
+schema = "EXAMPLE_SCHEMA"
+
+# ============================================================
+# Grain
+#
+# Absent means mode = "simple" — one row per business key, the
+# behavior of every non-branching mapping file.
+#
+# mode = "discriminated" means this file emits one row per BRANCH
+# MEMBER. That is a real grain change, and it is the point: a
+# discriminated attribute is not a column-level trick, it is a
+# row-producing construct. Counting rows here does not count
+# customers.
+#
+# `discriminator` must name an attribute in the domain file. It
+# is deliberately absent from [fields] and from every
+# [branches.fields] — each branch asserts it instead.
+# ============================================================
+
+[grain]
+mode = "discriminated"
+discriminator = "contact_type"
+
+# ============================================================
+# Sources
+#
+# Unchanged from a simple mapping. Branches do not redeclare
+# aliases; they reference these.
+# ============================================================
+
+[[sources]]
+alias = "c"
+table = "CUSTOMER_VERSION_HIST_FACT"
+role = "base"
+filter = "CURRENT_VERSION_FLAG = 'Y'"
+
+[[sources]]
+alias = "ci"
+table = "CONTACT_INFO"
+role = "contact_branch"
+
+[[sources]]
+alias = "ph"
+table = "CONTACT_PHONE_FACT"
+role = "phone_branch"
+
+[[sources]]
+alias = "pt"
+table = "PHONE_TYPE_CODE"
+role = "phone_type_lookup"
+
+[[sources]]
+alias = "cit"
+table = "CONTACT_INFO_TYPE_CODE"
+role = "contact_purpose_lookup"
+
+# ============================================================
+# Joins
+#
+# Still a tree rooted at the base alias. Each branch uses the
+# SUBSET of this tree its own expressions reach — the harness
+# derives that by walking from each expression to the root.
+#
+# This matters more here than in a simple mapping: if the phone
+# branch inherits the email branch's join, its grain inflates
+# and every phone count is wrong.
+# ============================================================
+
+[[joins]]
+left = "c.CUSTOMER_HISTORY_FACT_KEY"
+right = "ci.CUSTOMER_HISTORY_FACT_KEY"
+type = "left"
+
+[[joins]]
+left = "ci.CONTACT_INFO_KEY"
+right = "ph.CONTACT_INFO_KEY"
+type = "left"
+
+[[joins]]
+left = "ph.PHONE_TYPE_KEY"
+right = "pt.PHONE_TYPE_KEY"
+type = "left"
+
+[[joins]]
+left = "ci.CONTACT_INFO_TYPE_KEY"
+right = "cit.CONTACT_INFO_TYPE_KEY"
+type = "left"
+
+# ============================================================
+# Identity
+# ============================================================
+
+[identity]
+business_key = ["customer_id"]
+
+# ============================================================
+# Fields — branch-invariant only
+#
+# In a discriminated file, [fields] holds the attributes that
+# are the same in every branch. The harness projects them into
+# every leg.
+#
+# An attribute appearing here AND in a [branches.fields] block
+# is an error, not an override. It is ambiguous.
+# ============================================================
+
+[fields]
+
+customer_id    = "c.CUSTOMER_PUBLIC_ID"
+contact_purpose = "cit.CONTACT_INFO_TYPE_NAME"
+
+# ============================================================
+# Branches
+#
+# `implies` ASSERTS the discriminator value. Membership is
+# established by the join path — arriving here IS what makes the
+# row an email. Use when the source stores the mode nowhere.
+#
+# `when` TESTS a physical predicate. Use when the source stores
+# the mode, or a related type code, in a column.
+#
+# `when` selects rows; `implies` labels them. Both compile to a
+# UNION ALL leg.
+# ============================================================
+
+# --- email: asserted by path, plus sentinel exclusion ---------
+
+[[branches]]
+branch_id = "email"
+implies = { contact_type = "email" }
+when_not_null = ["ci.EMAIL_ADDRESS"]
+# Null-inclusive negation. `when_not` emits
+#   (COL IS NULL OR COL NOT IN (...))
+# rather than bare NOT IN, because under three-valued logic a
+# bare NOT IN silently drops every null row — and a row matching
+# no branch is absent from the union entirely, with no error.
+# Here the null case is already excluded by when_not_null above,
+# so the two keys combine to plain NOT IN. Stating both is what
+# makes that exclusion visible rather than accidental.
+when_not = { "ci.EMAIL_ADDRESS" = ["N/A", "NONE", "UNKNOWN"] }
+
+[branches.fields]
+contact_value = "ci.EMAIL_ADDRESS"
+preferred_flag = "ci.PREFERRED_EMAIL_FLAG"
+contact_active_flag = "ci.EMAIL_ACTIVE_FLAG"
+
+# --- phone and fax: same column, same path, split by type -----
+#
+# This pair is why both keys exist. Phone and fax reach the same
+# physical column through the same joins and are separated only
+# by a type code — that is `when`. They then carry different
+# canonical modes — that is `implies`. Neither key alone
+# expresses either branch.
+#
+# Note both enumerate POSITIVELY. A negatively-defined branch
+# ("everything that isn't fax") would absorb any type code added
+# upstream after this file was written and label it `phone`.
+# Positive enumeration leaves an unknown code unmatched, which
+# the branch-coverage assertion can detect.
+
+[[branches]]
+branch_id = "phone"
+implies = { contact_type = "phone" }
+when = { "pt.PHONE_TYPE_CODE" = ["HP", "WP", "CP"] }
+
+[branches.fields]
+contact_value = "ph.PHONE_NUMBER"
+contact_usage = "pt.PHONE_TYPE_NAME"
+preferred_flag = "ph.PREFERRED_FLAG"
+contact_active_flag = "ph.ACTIVE_FLAG"
+
+[[branches]]
+branch_id = "fax"
+implies = { contact_type = "fax" }
+when = { "pt.PHONE_TYPE_CODE" = "FX" }
+
+[branches.fields]
+contact_value = "ph.PHONE_NUMBER"
+preferred_flag = "ph.PREFERRED_FLAG"
+contact_active_flag = "ph.ACTIVE_FLAG"
+
+# ============================================================
+# Attribute candidates
+#
+# Unchanged in purpose, and it composes with branches: a
+# candidate carries a branch_id, so side-by-side adjudication
+# happens WITHIN a branch rather than across the whole file.
+#
+# candidate_resolution_mode = "discriminated" is the fifth
+# value, alongside single_candidate, multi_candidate, and
+# not_mappable_yet.
+# ============================================================
+
+[attribute_candidates.contact_value]
+attribute = "contact_value"
+candidate_resolution_mode = "discriminated"
+discriminator = "contact_type"
+selection_status = "recommended"
+selection_strategy = "One expression per branch. No single expression is correct across branches, and that is the finding rather than a gap."
+
+[[attribute_candidates.contact_value.candidates]]
+candidate_id = "email_contact_column"
+branch_id = "email"
+expression = "ci.EMAIL_ADDRESS"
+source_alias = "ci"
+status = "primary_recommended"
+rationale = "Only endpoint-grain email column in the neighborhood; populated for the large majority of contact rows carrying an email"
+
+[[attribute_candidates.contact_value.candidates]]
+candidate_id = "email_customer_level"
+branch_id = "email"
+expression = "c.EMAIL_ADDRESS"
+source_alias = "c"
+status = "low_likelihood"
+rationale = "Customer-grain duplicate of the same concept. Rejected because it cannot express a customer holding two email endpoints, which the declared grain requires."
+
+[[attribute_candidates.contact_value.candidates]]
+candidate_id = "phone_fact_number"
+branch_id = "phone"
+expression = "ph.PHONE_NUMBER"
+source_alias = "ph"
+status = "primary_recommended"
+rationale = "Sole number column on the phone fact; the type lookup discriminates mode without changing the payload column"
+
+[attribute_candidates.contact_value.latest_probe]
+run_date = "2026-01-15"
+sample_scope = "small"
+sample_definition = "first 3 customers per (segment, status) from the prepared sample"
+sample_customer_count = 90
+contact_rows = 245
+rows_email_branch = 93
+rows_phone_branch = 118
+rows_fax_branch = 9
+rows_matching_no_branch = 25
+inference = "Branch legs do not sum to the contact-row total. The 25 unmatched rows carry phone type codes absent from the lookup enumeration above and are currently dropped. Resolve before this mapping is trusted for coverage metrics."
+
+# ============================================================
+# Notes
+# ============================================================
+
+[notes]
+grain_warning = "Discriminated file: one row per contact endpoint, not one per customer. Customer-grain questions — 'has at least one contact of any type' — are a rollup on the business key, never a row count."
+discriminator_provenance = "contact_type is asserted by branch membership, not read from a column. The source has a communication-method column, but it is populated for a minority of rows and carries a single non-null value throughout the sample. That is a governance finding — the enterprise has a mode field and does not use it — and not a reason the attribute cannot be mapped."
+purpose_is_not_mode = "contact_purpose maps to the contact-type lookup, whose values are purposes (billing, correspondence, return mail), NOT modes. Conflating the two is what makes a contact mapping look impossible: the obvious type lookup answers a different question than the one being asked."
+mutual_exclusivity = "Phone and fax partition the phone type lookup between them, and the latest probe shows they do not partition it completely. Re-check the lookup whenever the source version changes; branches that under-cover lose rows silently."

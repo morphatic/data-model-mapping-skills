@@ -192,7 +192,16 @@ If none of the above applies, write "none". That will often be true, and it shou
 The primary candidate, the alternates, and the specific reason each alternate lost. If evidence is
 insufficient to choose, say so and mark it provisional rather than picking.
 
-**There is a third outcome besides mapped and not-found: the field exists and cannot be used.** A
+**Before concluding that no single field is right, check whether the attribute is discriminated.**
+Several fields each being correct for a different subset of rows is not the same as no field being
+correct. Signals: the candidates are each highly populated but on disjoint row sets; they sit on
+different join paths from the anchor; the attribute's name is a generic container (`value`, `id`,
+`amount`) and the source stores a type alongside it. When that is what you are looking at, the
+answer is a discriminated mapping and a complete recommendation — not `unresolved`, and never a
+proposal to restructure the domain model. **The domain model is not yours to redesign in a mapping
+turn.** If you believe it is genuinely wrong, say so under *What I need from you* and stop.
+
+**There is also an outcome besides mapped and not-found: the field exists and cannot be used.** A
 column can be real, plainly named, and still carry nothing a mapping could rely on. Persisting past
 that point burns turns and produces nothing; mapping it anyway hands the human a field that fails
 the first time someone reads it.
@@ -228,9 +237,16 @@ time; this is the most frequently failed part of the response, and the same two 
 
 - **Every candidate needs its `[[sources]]` and `[[joins]]` entries.** A candidate whose table is
   not declared is not addressable.
-- **A candidate expression is almost always a plain aliased field reference** — `table_alias.field_name`. If
-  you are writing a `CASE`, a `COALESCE`, or a concatenation, stop: you are encoding a decision into
-  the expression that belongs in the decision state, or merging fields the model wants kept apart.
+- **A candidate expression is always a plain aliased field reference** — `table_alias.field_name`.
+  If you are writing a `CASE`, a `COALESCE`, or a concatenation, stop. Three different things get
+  mistaken for each other here, and only one of them is an expression problem:
+  - You are merging fields the model wants kept apart. Split them.
+  - You are encoding a decision into the expression that belongs in the decision state. Record the
+    decision instead.
+  - **The attribute is discriminated** — several physical fields are each correct for a different
+    subset of rows, selected by type, path, or mode. This is not a defect and not a `CASE`. Declare
+    `[grain]` and `[[branches]]` per `configs/mappings/README.md`. Each branch expression stays a
+    plain field reference; the branch structure carries the selection.
 
 **Survey corrections**, if you found any — a missing lead, a stale one, a structural fact it did not
 record, an absence claim its own artifacts refute. Edit the survey; do not merely report it.

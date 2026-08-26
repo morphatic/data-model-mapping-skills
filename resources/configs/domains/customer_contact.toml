@@ -1,0 +1,126 @@
+# ============================================================
+# Logical Dataset Definition — GENERIC EXAMPLE
+#
+# A companion to customer.toml, demonstrating a domain whose
+# grain is finer than the aggregate root: one row per contact
+# endpoint rather than one row per customer.
+#
+# This domain exists to be mapped with a DISCRIMINATED mapping
+# (see configs/mappings/customer_contact/warehouse.toml). It is
+# the case where one canonical attribute — contact_value — is
+# instantiated by different physical columns depending on the
+# communication mode, and no single column is the right answer
+# for every row.
+#
+# Note what is NOT here: no endpoint key, no per-mode subtype
+# datasets, no join plumbing. Those belong to a materialized
+# integration model. A domain being mapped for profiling needs
+# the business concept and the discriminator, nothing more.
+# ============================================================
+
+name = "customer_contact"
+domain = "customer"
+description = "Canonical customer contact endpoint record — one row per way of reaching a customer"
+
+grain = "one_row_per_customer_contact"
+temporal_type = "current_state"
+
+# The business key includes the discriminator and the value,
+# because that triple is what makes an endpoint distinct. A
+# customer may hold several endpoints of the same mode.
+business_key = [
+    "customer_id",
+    "contact_type",
+    "contact_value"
+]
+
+criticality = "high"
+
+# ============================================================
+# Canonical Fields
+#
+# contact_type is the DISCRIMINATOR. In a discriminated mapping
+# it is not mapped to a column — each branch asserts its value.
+# Modeling it as an ordinary attribute here is correct: the
+# domain says the concept exists, and the mapping says how each
+# source produces it.
+# ============================================================
+
+[fields.customer_id]
+type = "string"
+required = true
+sensitive = false
+description = "Enterprise customer identifier"
+
+[fields.contact_type]
+type = "string"
+required = true
+sensitive = false
+description = "Communication mode of the endpoint — email, phone, fax, or text. Mode, not purpose: see contact_purpose."
+
+[fields.contact_value]
+type = "string"
+required = true
+sensitive = false
+description = "The endpoint value itself — an address for email, a number for phone or fax"
+
+[fields.contact_purpose]
+type = "string"
+required = false
+sensitive = false
+description = "Why this endpoint is held — billing, general correspondence, return mail. Orthogonal to contact_type; a source that labels endpoints by purpose is not thereby labeling them by mode."
+
+[fields.contact_usage]
+type = "string"
+required = false
+sensitive = false
+description = "Within-mode usage classification (for example home, work, or mobile)"
+
+[fields.preferred_flag]
+type = "boolean"
+required = false
+sensitive = false
+description = "Indicates whether this endpoint is the customer's preferred way of being reached"
+
+[fields.contact_active_flag]
+type = "boolean"
+required = false
+sensitive = false
+description = "Indicates whether the endpoint is currently active"
+
+# ============================================================
+# Field Sets
+# ============================================================
+
+[field_sets]
+
+identity = [
+    "customer_id"
+]
+
+channel = [
+    "contact_type",
+    "contact_value",
+    "contact_usage"
+]
+
+classification = [
+    "contact_purpose"
+]
+
+delivery_preferences = [
+    "preferred_flag"
+]
+
+validity = [
+    "contact_active_flag"
+]
+
+# ============================================================
+# Stewardship
+# ============================================================
+
+[governance]
+data_domain = "Customer"
+business_owner = "TBD"
+data_steward = "TBD"

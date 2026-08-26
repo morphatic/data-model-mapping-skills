@@ -252,6 +252,15 @@ Measured against everyone, it looks like a sparse and unpromising field; measure
 population it is for, it may be nearly complete. A lead recorded without its qualifying subset
 invites the mapper to reject it on a denominator that was never the right one.
 
+**Where an attribute has several leads that cover different rows rather than competing for the same
+ones, say so explicitly.** The signature is leads on separate join paths, or on the same column
+separated by a type code, each well populated within its own branch and empty outside it. That is
+one attribute stored several ways, not several candidates for one answer, and the two get confused
+constantly. Note it as a *possible discriminated attribute* and record what appears to distinguish
+the branches. Naming it here is cheap; leaving the mapper to discover it costs a session, and the
+mistake it invites — concluding the attribute cannot be mapped, and proposing to redesign the domain
+model until it can — is expensive to unwind.
+
 Do not rank leads or select a primary. That is the mapper's job.
 
 ### Not examined

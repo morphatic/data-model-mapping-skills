@@ -104,6 +104,12 @@ resolve.
   qualifying subset, not against every entity in the sample. A field that looks weak at 20% of all
   entities may be complete at 98% of the ones it is for. Before rejecting a candidate as sparse,
   state which population it is supposed to cover and count against that one.
+- **Several correct answers is not the same as no answer.** When candidates are each well populated
+  but on disjoint row sets — different join paths, different type codes, different modes — the
+  attribute is *discriminated*, not unresolved. It maps to one expression per branch. Reach for that
+  before concluding an attribute cannot be mapped, and never propose restructuring the domain model
+  to make one-field-per-attribute true; that imports the source's shape into a model whose purpose
+  is to be independent of it.
 - **A conflict you resolved yourself is not a conflict you surfaced.** Naming it in a document and
   then deciding alone has the same effect as never raising it. State the options, recommend one, and
   ask.

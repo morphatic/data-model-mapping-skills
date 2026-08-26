@@ -5,11 +5,20 @@
 # canonical attribute physically live, what evidence supports
 # that choice, and what remains undecided?
 #
-# This file demonstrates all four decision states:
+# A SIMPLE mapping: one row per business key, exactly one
+# expression per attribute in [fields]. This is the default and
+# the common case.
+#
+# It demonstrates four of the five decision states:
 #   mapped       — region_code, region_name, names, birth_date
 #   unresolved   — external_id (provisional, evidence thin)
 #   withheld     — geo_latitude / geo_longitude
 #   missing      — loyalty_tier
+#
+# The fifth — discriminated, where one attribute is served by
+# several physical fields selected by a discriminator — needs a
+# finer grain than this file has. See
+# configs/mappings/customer_contact/warehouse.toml.
 #
 # Section order follows configs/mappings/README.md.
 # ============================================================

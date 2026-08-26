@@ -15,6 +15,7 @@ scaffolds/
   variant-a/ … variant-d/          superseded candidates, kept as an evaluation record
   INSTALL.md                       placement and usage
   OPERATORS-MANUAL.md              how to run a session; context resets and working notes
+  MIGRATION-discriminated-mapping.md   adding branch grammar to an existing installation
 resources/                         generic config examples and templates
 domain_mapping_skill_eval_rubric.md   scoring instrument used to compare the variants
 ```
