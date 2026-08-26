@@ -248,6 +248,17 @@ time; this is the most frequently failed part of the response, and the same two 
     `[grain]` and `[[branches]]` per `configs/mappings/README.md`. Each branch expression stays a
     plain field reference; the branch structure carries the selection.
 
+    Two things about branches are easy to get wrong and silent when you do. **A branch whose
+    membership comes from the join path must declare that path**, or the left joins hand it one
+    empty row per entity and every count built on it is inflated. And **two paths to the same
+    discriminator value are candidates within one branch, not two branches** — check whether they
+    agree where both are populated before you decide which.
+
+**A discriminator with no column behind it is still a discriminator.** Where the only way to know a
+row's type is which tables you traversed, that is a finding worth stating plainly — the source
+encodes the distinction in schema structure rather than in data — not a reason the attribute cannot
+be mapped.
+
 **Survey corrections**, if you found any — a missing lead, a stale one, a structural fact it did not
 record, an absence claim its own artifacts refute. Edit the survey; do not merely report it.
 

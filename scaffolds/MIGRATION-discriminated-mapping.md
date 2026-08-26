@@ -37,15 +37,15 @@ text. Items 1–2 are the substance; 3–6 are cleanup that follows from them.
 A **branch** is a set of rows that carries a known value of a discriminator, plus the expressions
 that are valid for those rows. A mapping file with branches produces the union of its branches.
 
-Two things establish which rows are in a branch, and a branch may use either or both:
+Three keys establish a branch, and a branch may combine them:
 
 | Key | Meaning | Use when |
 | --- | --- | --- |
-| `implies` | The branch **asserts** the discriminator value. Membership is established by the join path. | The source does not store the discriminator anywhere. Arriving through this path *is* what makes the row an email. |
+| `implies` | The branch **asserts** the discriminator value. | The source does not store the discriminator anywhere. Arriving through this path *is* what makes the row an email. |
+| `requires` | The branch **declares which aliases constitute membership.** Those aliases join `INNER` for this leg only. | Always, for any branch whose membership comes from the path rather than from a column value. |
 | `when` | The branch **tests** a physical predicate. | The source stores the discriminator, or a related type code, in a column. |
 
-`when` selects rows. `implies` labels them. When both are present, the branch is *the rows matching
-the predicate, arriving through this path, labeled with this value*.
+`requires` establishes which rows exist in the branch. `when` narrows them. `implies` labels them.
 
 Both compile to the same thing — a leg of a `UNION ALL`. When every branch in a file uses only
 `when` against the same base rows, the branches partition one row set and the harness may emit a
@@ -80,13 +80,15 @@ rule already documented for `[[joins]]`.
 [[branches]]
 branch_id = "email"
 implies = { contact_type = "email" }
+requires = ["<CONTACT_ALIAS>"]
 
 [branches.fields]
-contact_value = "<EMAIL_ALIAS>.<EMAIL_COLUMN>"
+contact_value = "<CONTACT_ALIAS>.<EMAIL_COLUMN>"
 
 [[branches]]
 branch_id = "phone"
 implies = { contact_type = "phone" }
+requires = ["<PHONE_ALIAS>", "<PHONE_TYPE_ALIAS>"]
 when = { "<PHONE_TYPE_ALIAS>.<TYPE_CODE_COLUMN>" = ["<HOME>", "<WORK>", "<MOBILE>"] }
 
 [branches.fields]
@@ -95,6 +97,7 @@ contact_value = "<PHONE_ALIAS>.<PHONE_NUMBER_COLUMN>"
 [[branches]]
 branch_id = "fax"
 implies = { contact_type = "fax" }
+requires = ["<PHONE_ALIAS>", "<PHONE_TYPE_ALIAS>"]
 when = { "<PHONE_TYPE_ALIAS>.<TYPE_CODE_COLUMN>" = "<FAX>" }
 
 [branches.fields]
@@ -104,6 +107,42 @@ contact_value = "<PHONE_ALIAS>.<PHONE_NUMBER_COLUMN>"
 Note the phone/fax pair. Both reach the same physical column through the same path and are separated
 only by a type code — `when` does that work. Both then assert different canonical values — `implies`
 does that. Neither key alone expresses this branch; that pair is the reason to keep both.
+
+#### `requires`, and why a path-asserted branch needs it
+
+File-level `[[joins]]` are `LEFT` on purpose, so optional attributes stay visible as nulls and
+coverage stays meaningful. In a simple mapping that is right. In a path-asserted branch it
+fabricates rows.
+
+`base LEFT JOIN contact` yields a row for **every** base entity, including those with no contact row
+at all. The branch then stamps `contact_type = "email"` on all of them. The output gains one phantom
+email endpoint per entity, valued null — and because a discriminated file's row count *is* the
+endpoint count, every coverage figure computed from it is wrong in the same direction.
+
+`requires` names the aliases whose presence constitutes membership. Those aliases compile to `INNER`
+**for that leg only**; file-level joins stay `LEFT` everywhere else, including inside the same
+branch for aliases not named.
+
+It also removes an ambiguity worth removing on its own. Without it, branch membership is inferred
+from whichever aliases the branch's expressions happen to touch — so adding one field to a branch
+can silently change its grain. `requires` makes the path a declaration rather than a side effect of
+the field list.
+
+**Do not use a payload column's null-ness as the existence test.** `when_not_null` on the value
+column looks like it solves this and does not: it conflates *the endpoint does not exist* with *the
+endpoint exists and is empty*. Those are different facts, and the second one is often the finding.
+Use `requires` for existence and `when_not_null` only when you genuinely mean to exclude empty
+payloads.
+
+#### Nested paths change the denominator
+
+When a branch's path runs through another entity — a phone reachable only through an address row,
+say — membership is conditioned on that intermediate. `requires = ["addr", "bridge", "phone"]` says
+so honestly, and the coverage denominator for that branch is then *entities with an address*, not
+*entities*.
+
+Say it in `[notes]`. An entity holding a phone and no address is unreachable through such a path and
+will read as having no phone, which is a source-structure finding rather than a data-quality one.
 
 ### 1.4 Branch-invariant attributes
 
@@ -203,7 +242,30 @@ imprecise word, and the null trap is a reason to *define it carefully*, not a re
 
 Multi-candidate adjudication is unchanged and composes with branches. A branch may carry its own
 `[[attribute_candidates.<attribute>.candidates]]` list, scoped by `branch_id`, so side-by-side
-redundancy profiling keeps working *within* a branch:
+redundancy profiling keeps working *within* a branch.
+
+**Two paths to the same mode are candidates, not two branches.** This is the decision most likely to
+be made wrong, because the grammar permits both and only one is correct.
+
+Sources routinely hold the same endpoint twice — a denormalized column on the anchor entity, and the
+normalized row on the endpoint branch. It is tempting to write two branches carrying the same
+`implies` value, which is legal (that is how a disjunction is expressed). Here it is a defect: if the
+two are the same endpoint, the union emits **two rows for one thing**, and the endpoint count
+inflates silently.
+
+The rule is: **a branch is a discriminator value. Candidates are the ways to reach it.** One branch
+per mode, competing paths adjudicated inside it.
+
+The decision turns on one cheap probe, the same agreement check used to adjudicate any duplicated
+identifier — *where both are populated, do they agree?*
+
+- **They agree** → one endpoint, denormalized. Two candidates in one branch. The anchor-grain column
+  usually loses on grain: it cannot represent an entity holding two endpoints of the same mode,
+  which the declared grain requires. Record that as the reason it lost.
+- **They disagree** → genuinely distinct endpoints. Two branches, distinct `branch_id` values, same
+  `implies`. The disagreement is itself a finding and belongs in `[notes]`.
+
+Run the probe before writing either shape. Choosing by inspection is how the inflated count gets in.
 
 ```toml
 [attribute_candidates.contact_value]
@@ -286,7 +348,7 @@ customer_id = "c.CUSTOMER_PUBLIC_ID"
 [[branches]]
 branch_id = "email"
 implies = { contact_type = "email" }
-when_not_null = ["ci.EMAIL_ADDRESS"]
+requires = ["ci"]
 
 [branches.fields]
 contact_value = "ci.EMAIL_ADDRESS"
@@ -295,6 +357,7 @@ preferred_flag = "ci.PREFERRED_EMAIL_FLAG"
 [[branches]]
 branch_id = "phone"
 implies = { contact_type = "phone" }
+requires = ["ci", "ph", "pt"]
 when = { "pt.PHONE_TYPE_CODE" = ["HP", "WP", "CP"] }
 
 [branches.fields]
@@ -304,6 +367,7 @@ preferred_flag = "ph.PREFERRED_FLAG"
 [[branches]]
 branch_id = "fax"
 implies = { contact_type = "fax" }
+requires = ["ci", "ph", "pt"]
 when = { "pt.PHONE_TYPE_CODE" = "FX" }
 
 [branches.fields]
@@ -313,6 +377,7 @@ preferred_flag = "ph.PREFERRED_FLAG"
 [notes]
 grain_warning = "This file is discriminated and produces one row per contact endpoint, not one row per customer. Counting rows here does not count customers."
 discriminator_provenance = "contact_type is asserted by branch membership, not read from a column. The source's own communication-method column is present but populated for a small minority of rows and carries a single non-null value, so it is not usable as the discriminator. That is a governance finding, recorded here, not a mapping blocker."
+branch_denominators = "The phone and fax branches require the contact alias as an intermediate, so their coverage denominator is customers with a contact row, not all customers. A customer holding a phone reachable by some other path would read as having none."
 mutual_exclusivity = "Phone and fax branches partition the phone type lookup between them. If a new type code is added upstream, rows carrying it fall into no branch and disappear silently. Re-check the lookup when the source version changes."
 ```
 
@@ -333,6 +398,14 @@ implementation, since this document cannot carry code.
 - Derive each leg's join subset by walking from its expressions to the base alias. A leg must not
   join tables no expression in it references — otherwise the phone leg inherits the email join and
   the grain inflates.
+- Compile `requires` aliases to `INNER` **for that leg only**. Every other join in the same leg
+  stays as declared at file level. Getting this wrong in either direction is a silent correctness
+  bug: `LEFT` where `INNER` was meant fabricates endpoints, `INNER` where `LEFT` was meant drops
+  entities whose optional attributes are absent.
+- Include the transitive path when a `requires` alias is reached through intermediates. Naming the
+  leaf alias alone leaves the intermediate hops `LEFT`, which reintroduces the phantom row one hop
+  up. Either require the author to name every alias on the path, or walk it — but do not half-walk
+  it.
 - Optional, and safe to defer: when every branch uses only `when` against an identical alias set,
   emit a single `CASE`-based query instead of a union.
 
@@ -354,6 +427,12 @@ implementation, since this document cannot carry code.
 - Every expression resolves to a declared alias.
 - Every attribute named across `[fields]` and all branches exists in the domain file.
 - The discriminator is **not** present in `[fields]` or any `[branches.fields]`.
+- **Fail** when a branch has `implies` but neither `requires` nor any existence predicate. This is
+  not a style warning: such a branch will always emit one phantom row per base entity. It is the one
+  defect in this grammar whose failure is certain rather than possible, so it is an error.
+- Every `requires` alias is declared in `[[sources]]` and is reachable from the base alias.
+- Warn when a `requires` alias is reached through an intermediate alias not itself listed, since the
+  intermediate hop stays `LEFT` and the phantom row reappears there.
 - Warn — do not fail — when branches carry only `implies` and no `when`, since mutual exclusivity
   cannot then be checked statically.
 - Warn — do not fail — when a branch's predicates are **entirely negative** (`when_not` /
@@ -381,6 +460,12 @@ implementation, since this document cannot carry code.
   `when_not`, and is **dropped** when `when_not` and `when_not_null` are combined. This is the
   behavior most likely to regress under a well-meaning refactor toward plain `NOT IN`, and it is
   invisible without a null row in the fixture.
+- Add specifically for `requires`: the fixture must contain a base entity with **no** branch row at
+  all. Assert it produces zero rows for that branch, not one null-valued row. Without such an entity
+  the phantom-row bug is invisible and every assertion still passes — which is exactly how it would
+  reach production.
+- Add: a `requires` alias reached through an intermediate produces rows only for entities that have
+  the intermediate. Pair it with an entity that has the leaf's grandparent but not its parent.
 
 ---
 

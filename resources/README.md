@@ -64,9 +64,29 @@ independent of it.
 **One canonical attribute may need several physical fields, and that belongs in the mapping.**
 The discriminated example shows the mechanism: `[grain]` declares that the file emits one row per
 branch member rather than one per business key, and each `[[branches]]` block pairs a set of rows
-with the expressions valid for them. `implies` asserts the discriminator when the source stores it
-nowhere; `when` tests a predicate when it does. The phone and fax branches are the case that needs
-both — same column, same join path, separated only by a type code, then labeled differently.
+with the expressions valid for them. `requires` establishes which rows exist in the branch, `when`
+narrows them, `implies` labels them. The phone and fax branches are the case that needs all three —
+same column, same join path, separated only by a type code, then labeled differently.
+
+**A discriminator can be structural rather than stored.** Where no column carries the mode and the
+only way to know it is which tables you traversed, `implies` is the answer: the branch asserts what
+the path establishes. That situation is worth reporting as a finding in its own right — a source
+that encodes a distinction in schema shape rather than in data cannot gain a new value without a
+schema change, cannot answer "all endpoints" without prior knowledge of every path, and gives every
+consumer its own private derivation with nothing to make them agree.
+
+**A path-asserted branch must declare its membership, or it fabricates rows.** File-level joins are
+`LEFT` so optional attributes stay visible; in a branch that means every base entity gets a row,
+including those with nothing on the branch at all, each stamped with the branch's asserted value.
+`requires` names the aliases whose presence *is* membership and compiles them to `INNER` for that
+leg only. Do not substitute a null test on the payload column — an endpoint that exists and is
+empty is a different fact from one that does not exist, and the second is often the finding.
+
+**Two paths to the same discriminator value are candidates, not two branches.** Sources routinely
+hold an endpoint twice, denormalized onto the anchor and normalized on a branch. Writing two
+branches with the same asserted value is legal and here wrong: it emits two rows for one thing. One
+branch per value, competing paths adjudicated inside it, decided by whether the two agree where both
+are populated.
 
 **The `when` predicate grammar is restricted so it is portable by construction.** Equality, `IN`,
 `LIKE`, null tests, and their negations — the intersection of Oracle, Databricks SQL, Postgres,
